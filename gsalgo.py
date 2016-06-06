@@ -162,8 +162,6 @@ class NRM_GS:
 
 		self.currentpsf = mft(self.pupil_i, self.nlamD, self.npix_img)
 
-			pupilpha = imfilter.uniform_filter(paddedpha)#, nsig)
-			self.pupil_i = abs(self.pupil_i)*np.exp(1j*pupilpha*self.pupsupport)*self.pupsupport
 		self.metriclist.append(self.compute_metric())
 
 		if hasattr(self,"god"):
@@ -189,6 +187,7 @@ class NRM_GS:
 
 		self.metric = np.std((self.puppha_i[self.residmask==1] - \
 			      np.angle(self.pupil_i)[self.residmask==1]))\
+				# / (self.puppha_i*self.pupsupport).sum()
 		if hasattr(self, "god"):
 			# self.god is the true input aberration. If defined this will compute the 
 			# True residual
