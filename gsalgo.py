@@ -87,7 +87,7 @@ class NRM_GS:
             if (self.i==105 & hasattr(self, "fitscubename")):
                 fits.PrimaryHDU(data=self.fitscube).writeto(self.fitscubename,\
                         clobber=True)
-            if self.i > 100:
+            if self.i > 25:
                 print "Reached max constraint iterations"
                 break
 
@@ -145,18 +145,23 @@ class NRM_GS:
         plt.colorbar()
         plt.show()
         plt.figure()
-        print "DEBUG:",self.pup_i
+        if self.i>1:
+            print "convergence:",self.metriclist[-1]
         #plt.imshow(self.puppha_i)
         plt.subplot(131)
         plt.title("Pupil amplitude, iteration {0}".format(self.i-1))
         plt.imshow(abs(self.pup_i))
         plt.subplot(132)
-        plt.title("Pupil support, iteration {0}".format(self.i-1))
-        plt.imshow(self.pupsupport)
+        if self.i>1:
+            plt.title("current PSF, iteration {0}".format(self.i-1))
+            plt.imshow(abs(self.currentpsf))
+        else:
+            plt.title("data PSF, iteration {0}".format(self.i-1))
+            plt.imshow(np.sqrt(self.dpsf))
         plt.subplot(133)
         plt.title("Pupil wavefront, iteration {0}".format(self.i-1))
         plt.imshow(np.angle(abs(self.pup_in)*self.pupsupport*np.exp(1j*self.puppha_i)))
-        #plt.colorbar()
+        plt.colorbar()
         plt.show()
         """
 
@@ -180,13 +185,15 @@ class NRM_GS:
         zmeanphase = np.angle(self.pupil_i) - \
                 np.mean(np.angle(self.pupil_i)[self.pupsupport==1])
         #		np.mean(np.angle(self.pupil_i)[self.residmask==1])
-        self.pupil_i = abs(self.pupil_i)*np.exp(1j*zmeanphase)
+        #self.pupil_i = abs(self.pupil_i)*np.exp(1j*zmeanphase)
+        self.pupil_i = abs(self.pupsupport)*np.exp(1j*zmeanphase)
 
         if self.zsmooth==True:
             # smooth each iterations by fitting zernikes, gets rid of unphysical
             # high frequency artifacts
             self.fit_zernikes()
-            self.pupil_i = abs(self.pupil_i)*np.exp(1j*self.full_rec_wf)
+            #self.pupil_i = abs(self.pupil_i)*np.exp(1j*self.full_rec_wf)
+            self.pupil_i = abs(self.pupsupport)*np.exp(1j*self.full_rec_wf)
 
         self.currentpsf = mft(self.pupil_i, self.nlamD, self.npix_img)
 
