@@ -30,7 +30,11 @@ import matplotlib.pyplot as plt
 import zernike_AG as zern
 from gsgs import gsalgo
 from poppy.matrixDFT import matrix_dft as mft
+<<<<<<< HEAD
 # from matrixDFT import matrix_dft as mft
+=======
+#from matrixDFT import matrix_dft as mft
+>>>>>>> ba072c837e75332b3a158f830586c23a8841c213
 from gsgs.NRM_mask_definitions import NRM_mask_definitions
 from simtools import makedisk, mas2rad, baselinify, makeA
 

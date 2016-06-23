@@ -64,6 +64,8 @@ def zernikel(j, rho, phi):
 	m = -n+2*j
 	return zernike(m, n, rho, phi)
 
+
+
 class ZernikeFitter:
 	"""
 	Does Zernikes on a circular disk fitting just inside your array of size narr,
@@ -73,7 +75,7 @@ class ZernikeFitter:
 	Usage:
 
 		import ZernikeFitter as ZF
-		zf = ZF.ZernikeFitter(nzern=10, narr=200)
+		zf = ZF.ZernikeFitter(nzern=10, narr=200) # sqaure array containing the disk (D)
 		zcoeffs, fittedsurface, residualsurface = zf.fit_zernikes_to_surface(yoursurface)
 
 
@@ -81,7 +83,7 @@ class ZernikeFitter:
 	N.B. These are Noll-numbered Zernikes     anand@stsci.edu 2015
 	"""
 
-	def __init__(self, nzern=15, narr=200, SEEGRID=False):
+	def __init__(self, nzern=15, narr=200, extrasupportindex=None):
 		"""
 		Input: nzern: number of Noll Zernikes to use in the fit
 		Input: narr: the live pupil array size you want to use
@@ -96,17 +98,15 @@ class ZernikeFitter:
 		self.nzern = nzern  # tbd - allowed numbers from Pascal's Triangle sum(n) starting from n=1, viz. n(n+1)/2
 		self.grid = (N.indices((self.narr, self.narr), dtype=N.float) - self.narr//2) / (float(self.narr)*0.5) 
 		self.grid_rho = (self.grid**2.0).sum(0)**0.5
-
-		if SEEGRID:
-			print "grid:"
-			print self.grid
-			print "grid_rho"
-			print self.grid_rho
-			sys.exit()
-			
 		self.grid_phi = N.arctan2(self.grid[0], self.grid[1])
 		self.grid_mask = self.grid_rho <= 1
 		self.grid_outside = self.grid_rho > 1
+
+		if extrasupportindex is not None:
+			self.grid_mask[extrasupportindex] = 0
+			self.grid_outside[extrasupportindex] = 1
+		else:
+			pass
 		# Compute list of explicit Zernike polynomials and keep them around for fitting
 		self.zern_list = [zernikel(i, self.grid_rho, self.grid_phi)*self.grid_mask for i in xrange(self.nzern)]
 
@@ -131,16 +131,14 @@ class ZernikeFitter:
 		# Given the inner product vector of the test wavefront with Zernike basis,
 		# calculate the Zernike polynomial coefficients
 		zcoeffs = N.dot(self.cov_mat_in, wf_zern_inprod)
-		# print "First 10 recovered Zernike coeffts:", zcoeffs[:10]
+		print "First 10 recovered Zernike coeffts:", zcoeffs[:10]
 	
 		# Reconstruct (e.g. wavefront) surface from Zernike components
 		rec_wf = sum(val * zernikel(i, self.grid_rho, self.grid_phi) for (i, val) in enumerate(zcoeffs))
-		rec_wf = rec_wf * self.grid_mask
+		rec_wf = rec_wf*self.grid_mask
 
-		# print "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std()
-		return zcoeffs, rec_wf, (surface*self.grid_mask - rec_wf)
-
-
+		print "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std()
+		return zcoeffs, rec_wf, (surface - rec_wf)*self.grid_mask
 
 
 class HexikeFitter:
@@ -160,7 +158,7 @@ class HexikeFitter:
 	N.B. These are Noll-numbered Zernikes     anand@stsci.edu 2015
 	"""
 
-	def __init__(self, nhex=15, narr=200):
+	def __init__(self, nhex=15, narr=200, extrasupportindex=None):
 		"""
 		Input: nzern: number of Noll Zernikes to use in the fit
 		Input: narr: the live pupil array size you want to use
@@ -178,9 +176,27 @@ class HexikeFitter:
 		self.grid_phi = N.arctan2(self.grid[0], self.grid[1])
 		self.grid_mask = self.grid_rho <= 1
 		self.grid_outside = self.grid_rho > 1
+
+		if extrasupportindex is not None:
+			self.grid_mask[extrasupportindex] = 0
+			self.grid_outside[extrasupportindex] = 1
+
 		# Compute list of explicit Zernike polynomials and keep them around for fitting
 		self.hex_list = z.hexike_basis(nterms = self.nhex, npix=self.narr)
 
+
+		self.hex_list = z.hexike_basis(nterms = self.nhex, npix=self.narr)
+
+		# Force hexikes to be unit standard deviation over hex mask
+		for h, hfunc in enumerate(self.hex_list):
+		    if h>0: self.hex_list[h] = (hfunc/hfunc[self.grid_mask].std()) * self.grid_mask
+		    else: self.hex_list[0] = hfunc * self.grid_mask
+
+		#### Write out a cube of the hexikes in here
+		if 0:
+			self.stack = N.zeros((self.nhex, self.narr, self.narr))
+			for ii in range(len(self.hex_list)):
+				self.stack[ii,:,:] = self.hex_list[ii]
 		# Calculate covariance between all Zernike polynomials
 		self.cov_mat = N.array([[N.sum(hexi * hexj) for hexi in self.hex_list] for hexj in self.hex_list])
 		self.grid_mask = z.hex_aperture(npix=self.narr)==1
@@ -204,7 +220,6 @@ class HexikeFitter:
 		# Given the inner product vector of the test wavefront with Zernike basis,
 		# calculate the Zernike polynomial coefficients
 		hcoeffs = N.dot(self.cov_mat_in, wf_hex_inprod)
-		print "First 10 recovered Hernike coeffts:", hcoeffs[:10]
 	
 		# Reconstruct (e.g. wavefront) surface from Zernike components
 		hexikes =  z.hexike_basis(nterms=len(hcoeffs), npix=self.narr)
@@ -212,5 +227,9 @@ class HexikeFitter:
 			hcoeffs[choosemodes==0] = 0
 		rec_wf = sum(val * hexikes[i] for (i, val) in enumerate(hcoeffs))
 
-		print "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std()
+		if 0:
+			print "First 10 recovered Hernike coeffts:", hcoeffs[:10]
+			print "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std()
 		return hcoeffs, rec_wf, (surface - rec_wf)*self.grid_mask
+
+
