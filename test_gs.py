@@ -31,7 +31,7 @@ import zernike_AG as zern
 from gsgs import gsalgo
 #from poppy.matrixDFT import matrix_dft as mft
 from matrixDFT import matrix_dft as mft
-from NRM_mask_definitions import NRM_mask_definitions
+from gsgs.NRM_mask_definitions import NRM_mask_definitions
 from simtools import makedisk, mas2rad, baselinify, makeA
 
 
