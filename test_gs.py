@@ -29,8 +29,8 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import zernike_AG as zern
 from gsgs import gsalgo
-#from poppy.matrixDFT import matrix_dft as mft
-from matrixDFT import matrix_dft as mft
+from poppy.matrixDFT import matrix_dft as mft
+#from matrixDFT import matrix_dft as mft
 from gsgs.NRM_mask_definitions import NRM_mask_definitions
 from simtools import makedisk, mas2rad, baselinify, makeA
 
