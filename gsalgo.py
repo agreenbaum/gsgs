@@ -32,7 +32,8 @@ from zerniketools import ZernikeFitter, HexikeFitter
 from HexikeFitter import HexikeFitter
 
 class NRM_GS:
-    def __init__(self, dpsf, pupsupport, pha_constraint, c_support, segmentwhich=None, god=None):
+    def __init__(self, dpsf, pupsupport, pha_constraint, c_support, segmentwhich=None, god=None,
+                 watch=False):
         """
         requires both full pupil and nrm data and pupil supports for each
         which array needs to be specified for segmented telescope
@@ -58,6 +59,9 @@ class NRM_GS:
         self.nitermax = 500
         self.zsmooth=True
         self.segmentwhich = segmentwhich
+
+        # Do you want to see what the algorithm is doing each iteration? Set to True.
+        self.watch=watch
 
         if god is not None:
             # give it the true phase to constrain
@@ -87,9 +91,12 @@ class NRM_GS:
             if (self.i==105 & hasattr(self, "fitscubename")):
                 fits.PrimaryHDU(data=self.fitscube).writeto(self.fitscubename,\
                         clobber=True)
-            if self.i > 25:
+            if self.i > self.nitermax_c:
                 print "Reached max constraint iterations"
                 break
+        # Force this to stop without relaxing constraint
+        if self.i > self.nitermax:
+            self.metric = self.condition - 0.5*self.condition
 
         # Now lift the constraint to finish off
         self.c_support = np.zeros((self.c_support.shape))
@@ -144,26 +151,30 @@ class NRM_GS:
         plt.imshow(self.constraint+self.puppha_i)
         plt.colorbar()
         plt.show()
-        plt.figure()
-        if self.i>1:
-            print "convergence:",self.metriclist[-1]
-        #plt.imshow(self.puppha_i)
-        plt.subplot(131)
-        plt.title("Pupil amplitude, iteration {0}".format(self.i-1))
-        plt.imshow(abs(self.pup_i))
-        plt.subplot(132)
-        if self.i>1:
-            plt.title("current PSF, iteration {0}".format(self.i-1))
-            plt.imshow(abs(self.currentpsf))
-        else:
-            plt.title("data PSF, iteration {0}".format(self.i-1))
-            plt.imshow(np.sqrt(self.dpsf))
-        plt.subplot(133)
-        plt.title("Pupil wavefront, iteration {0}".format(self.i-1))
-        plt.imshow(np.angle(abs(self.pup_in)*self.pupsupport*np.exp(1j*self.puppha_i)))
-        plt.colorbar()
-        plt.show()
         """
+        if self.watch:
+            plt.figure()
+            if self.i>1:
+                print "convergence:",self.metriclist[-1]
+            #plt.imshow(self.puppha_i)
+            plt.subplot(221)
+            plt.title("Pupil amplitude, iteration {0}".format(self.i-1))
+            plt.imshow(abs(self.pup_i))
+            plt.subplot(222)
+            if self.i>1:
+                plt.title("current PSF, iteration {0}".format(self.i-1))
+                plt.imshow(abs(self.currentpsf)[100:-100, 100:-100], cmap="gray")
+            else:
+                plt.title("data PSF, iteration {0}".format(self.i-1))
+                plt.imshow(np.sqrt(self.dpsf)[100:-100, 100:-100], cmap="gray")
+            plt.subplot(223)
+            plt.title("Pupil wavefront, iteration {0}".format(self.i-1))
+            plt.imshow(np.angle(abs(self.pup_in)*self.pupsupport*np.exp(1j*self.puppha_i)))
+            plt.colorbar()
+            plt.subplot(224)
+            plt.title("data PSF".format(self.i-1))
+            plt.imshow(np.sqrt(self.dpsf)[100:-100, 100:-100], cmap="gray")
+            plt.show()
 
         if hasattr(self, "fitscubename"):
             # writes a cube every 10 iterations up to i=100, useful for checking progress
@@ -314,11 +325,18 @@ class NRM_GS:
             sidesz= (fov - self.livepupilD) / 2
 
             # crop down to just the pupil
-            croppedpupphases = (self.pupsupport*np.angle(self.pupil_i))[sidesz:-sidesz, \
+            # Edit June 2016: if sidesz is zero this breaks! Added in this if statement.
+            if sidesz>0:
+                croppedpupphases = (self.pupsupport*np.angle(self.pupil_i))[sidesz:-sidesz, \
                                             sidesz:-sidesz]
-            # initialize Zernike fitter
-            zf = ZernikeFitter(nzern=nmodes, narr = croppedpupphases.shape[0],
-                    extrasupportindex=(self.pupsupport[sidesz:-sidesz,sidesz:-sidesz]==0))
+                # initialize Zernike fitter
+                zf = ZernikeFitter(nzern=nmodes, narr = croppedpupphases.shape[0],
+                        extrasupportindex=(self.pupsupport[sidesz:-sidesz,sidesz:-sidesz]==0))
+            else:
+                croppedpupphases = (self.pupsupport*np.angle(self.pupil_i))
+                # initialize Zernike fitter
+                zf = ZernikeFitter(nzern=nmodes, narr = croppedpupphases.shape[0],
+                        extrasupportindex=(self.pupsupport==0))
 
             self.zcoeffs, self.rec_wf, self.zresid = \
                 zf.fit_zernikes_to_surface(croppedpupphases)
@@ -345,7 +363,11 @@ class NRM_GS:
             print self.zcoeffs
             sys.exit()
             """
-            self.full_rec_wf[sidesz:-sidesz, sidesz:-sidesz] = zf.grid_mask*self.rec_wf
+            if sidesz > 0:
+                self.full_rec_wf[sidesz:-sidesz, sidesz:-sidesz] = zf.grid_mask*self.rec_wf
+            else:
+                self.full_rec_wf = zf.grid_mask*self.rec_wf
+
             return self.zcoeffs
 
 
