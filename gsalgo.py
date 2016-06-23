@@ -27,9 +27,9 @@ import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
 from poppy.matrixDFT import matrix_dft as mft
+#from matrixDFT import matrix_dft as mft
 from simtools import *
 from zerniketools import ZernikeFitter, HexikeFitter
-from HexikeFitter import HexikeFitter
 
 class NRM_GS:
     def __init__(self, dpsf, pupsupport, pha_constraint, c_support, segmentwhich=None, god=None,
