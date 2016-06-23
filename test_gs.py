@@ -135,7 +135,7 @@ def measure_nrm_pistons(maskobj, nrmpsf, telD, debug=False):
         phaseloc[region==1] = fringephases[bl]
 
     bl_mat = makeA(len(maskobj.ctrs))
-    hole_phases = - np.dot(np.linalg.pinv(bl_mat), fringephases)
+    hole_phases = np.dot(np.linalg.pinv(bl_mat), fringephases)
 
     if debug:
         plt.set_cmap("gray")
