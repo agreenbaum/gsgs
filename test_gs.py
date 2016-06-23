@@ -187,7 +187,7 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
 
     nrm_support = pupconstraint.copy()
     nrm_support[abs(pupconstraint)>0] = 1
-    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support)
+    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, watch=True)
     gs.nlamD = nlamD
     gs.damping = True
     gs.zsmooth=True
