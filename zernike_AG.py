@@ -11,7 +11,7 @@ import pylab as pl
 import sys,os
 from scipy.misc import factorial as fac
 import math
-import AG_utils as AG
+from gsgs import simtools
 
 # Coordinate grid:
 N = 64
@@ -78,7 +78,7 @@ def scipymodel(vector, rho, theta):
 
 if __name__ == "__main__":
 
-	support = AG.makedisk(rho.shape[0], R=32, array="EVEN")
+	support = simtools.makedisk(rho.shape[0], R=32, array="EVEN")
 	for q in range(20):
 		print (q+5)//5, (q+5)%5
 		ax=pl.subplot2grid((4,5),((q)//5,(q+5)%5))
