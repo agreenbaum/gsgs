@@ -187,13 +187,13 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
 
     nrm_support = pupconstraint.copy()
     nrm_support[abs(pupconstraint)>0] = 1
-    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, watch=True)
+    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, watch=False)
     gs.nlamD = nlamD
     gs.damping = True
     gs.zsmooth=True
     gs.condition_c = 1.0e-2
     gs.nitermax = 500
-    gs.nitermax_c = 500
+    gs.nitermax_c = 25
     wavefront = gs.find_wavefront()
 
     print "==========================="
