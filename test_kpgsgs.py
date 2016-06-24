@@ -32,6 +32,7 @@ from gsgs import gsalgo
 from poppy.matrixDFT import matrix_dft as mft
 from gsgs.NRM_mask_definitions import NRM_mask_definitions
 from simtools import makedisk, mas2rad, baselinify, makeA
+import pysco
 
 
 def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False):
@@ -158,11 +159,14 @@ def measure_nrm_pistons(maskobj, nrmpsf, telD, debug=False):
     print "Hole phases measured:", hole_phases
     return hole_phases
 
-def create_pupilestim_array(maskobj, pistons, npix, OD, debug=False):
+def create_pupilestim_array(txtfile, pistons, npix, OD, debug=False):
+
+    cens = np.loadtxt(txtfile)
+    cens[:,1] *= -1
 
     m2pix = 0.95*(npix)/OD
     pupilest = np.zeros((npix, npix))
-    for q, ctrloc in enumerate(maskobj.ctrs):
+    for q, ctrloc in enumerate(cens):
         #ctrs = cvpha.shape[0]/2. - ctrloc[0], cvpha.shape[0]/2. - ctrloc[1]
         ctrs = ctrloc[0]*m2pix, ctrloc[1]*m2pix
         mask = makedisk(npix, 8, ctr=ctrs)
@@ -192,7 +196,7 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
     gs.damping = True
     gs.zsmooth=True
     gs.condition_c = 1.0e-2
-    gs.nitermax = 500
+    gs.nitermax = 50
     gs.nitermax_c = 25
     wavefront = gs.find_wavefront()
 
@@ -226,25 +230,28 @@ def simple_demo():
 
     psf_430 = make_PSF(pupsupport, aberr, lam1, telD, mas2rad(65), bandwidth=0.05)
 
-    maskdef = NRM_mask_definitions(maskname="jwst_g7s6c")
-    maskdef.ctrs = np.array(maskdef.ctrs)
+    # maskdef = NRM_mask_definitions(maskname="jwst_g7s6c")
+    # maskdef.ctrs = np.array(maskdef.ctrs)
 
-    nrmask = make_mask(maskdef, aberr.shape[0], telD)
-    nrm_430 = make_PSF(nrmask, aberr, lam1, telD, mas2rad(65), bandwidth=0.05)
+    # nrmask = make_mask(maskdef, aberr.shape[0], telD)
+    # nrm_430 = make_PSF(nrmask, aberr, lam1, telD, mas2rad(65), bandwidth=0.05)
 
     # now do kernel phase
     pupil = './geometry/jwstmodel.pick'
     a = pysco.rpo(pupil)
 
-    a.extract_rpd(nrm_430, plotim=True, wrad=200,weight=False,
+    a.extract_rpd(psf_430, plotim=False, wrad=200,weight=False,
         wavel=lam1,pscale=65,sgrad=200,rawimage=True)
     a.wfs.name = "Wavefront Sensing Test"
     a.remove_tiptilt()
+    a.plot_pupil_phase_map()
     phases = a.pistontiptilt()
     pistons_430 = phases[0,:]
 
+    cen_file = './geometry/jwstcens.txt'
+
     # pistons_430 = measure_nrm_pistons(maskdef, nrm_430,telD, debug=True)
-    pupestim = create_pupilestim_array(maskdef, pistons_430, aberr.shape[0], telD)
+    pupestim = create_pupilestim_array(cen_file, pistons_430, aberr.shape[0], telD)
 
     recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, mas2rad(65))
 
@@ -267,11 +274,11 @@ def simple_demo():
     plt.imshow(pupestim, vmin=vmin, vmax=vmax)
     plt.axis("off")
     plt.colorbar()
-    plt.subplot(232)
-    plt.title("NRM")
-    plt.imshow(nrmask)
-    plt.axis("off")
-    plt.colorbar()
+    # plt.subplot(232)
+    # plt.title("NRM")
+    # plt.imshow(nrmask)
+    # plt.axis("off")
+    # plt.colorbar()
     plt.subplot(236)
     plt.title("mask * aberration")
     plt.imshow(nrmask*aberr, vmax=vmax, vmin=vmin)

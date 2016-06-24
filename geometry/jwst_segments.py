@@ -62,7 +62,7 @@ segments = (19)*10000#(19-ncut)*(7+6+6+6+6)
 subsampled = np.zeros((segments,2))
 newindices = np.zeros(segments)
 
-hexpattern = makehex(origin,0.98*d,niter=1)# makecirc(origin,0.9*d,nrings=3)
+hexpattern = makehex(origin,0.98*d,niter=2)# makecirc(origin,0.9*d,nrings=3)
 hexsize = hexpattern.shape[0]
 
 i = 0 # initialise
@@ -134,6 +134,7 @@ Now save the coords
 ---------------------'''
 
 np.savetxt('./geometry/jwst.txt',subsampled)
+np.savetxt('./geometry/jwstcens.txt',all_segs)
 
 data = {'mask'   : subsampled,
         'indices': indices,

@@ -55,8 +55,8 @@ class NRM_GS:
         self.condition_c = 1.0e-2 #default condition, user can manually change
         self.metriclist = []
         self.errorlist = []
-        self.nitermax_c = 100
-        self.nitermax = 500
+        self.nitermax_c = 10
+        self.nitermax = 20
         self.zsmooth=True
         self.segmentwhich = segmentwhich
 
