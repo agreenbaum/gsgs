@@ -30,15 +30,22 @@ import matplotlib.pyplot as plt
 import zernike_AG as zern
 from gsgs import gsalgo
 from poppy.matrixDFT import matrix_dft as mft
-from gsgs.NRM_mask_definitions import NRM_mask_definitions
 from simtools import makedisk, mas2rad, baselinify, makeA
 import pysco
 
 
-def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False):
+def generate_aberration(nz, pv, npix=0,livepupilrad=None, debug=False, readin=False):
     """
     Generate a zero mean aberration (w/o piston) in radians
     """
+    if readin is not False:
+        pupmask = fits.getdata(readin)
+        npix = pupmask.shape[0]
+        livepupilrad = max(np.array(pupmask.sum(axis=0), pupmask.sum(axis=1)])) / 2
+    else:
+        pupmask = np.ones(rho.shape)
+        pupmask[rho>1] = 0
+
     y,x = np.indices((npix,npix)) - npix/2.0
     if livepupilrad is not None:
         rho = np.sqrt( (x*x) + (y*y) ) / livepupilrad
@@ -46,20 +53,19 @@ def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False):
         rho = np.sqrt( (x*x) + (y*y) ) / (npix/2.0)
     theta = np.arctan2(y,x)
 
+
     aberr = np.zeros(rho.shape)
     for z in range(nz):
         aberr += np.random.rand()*zern.zernikel(z+1,rho,theta)
         aberr[rho>1] = 0
         if debug:
             plt.imshow(aberr)
-            plt.show()
+             plt.show()
 
     aberr = aberr - np.mean(aberr[rho<=1])
     # force P2V
     aberr = pv * aberr/(aberr.max() - aberr.min())
     print "rms pupil aberr:", np.sqrt(np.var(aberr[rho<1]))
-    pupmask = np.ones(rho.shape)
-    pupmask[rho>1] = 0
     return aberr, pupmask
 
 def make_PSF(pupmask, aberr, lam_c, telD, pixscale, bandwidth=0, debug=False):
@@ -226,15 +232,9 @@ def simple_demo():
     telD = 6.5
     lam1 = 4.3e-6
 
-    aberr, pupsupport = generate_aberration(npix=256, nz=5, pv=2.0)
+    aberr, pupsupport = generate_aberration(npix=256, nz=5, pv=2.0, readin="MASKCLEAR256.fits")
 
     psf_430 = make_PSF(pupsupport, aberr, lam1, telD, mas2rad(65), bandwidth=0.05)
-
-    # maskdef = NRM_mask_definitions(maskname="jwst_g7s6c")
-    # maskdef.ctrs = np.array(maskdef.ctrs)
-
-    # nrmask = make_mask(maskdef, aberr.shape[0], telD)
-    # nrm_430 = make_PSF(nrmask, aberr, lam1, telD, mas2rad(65), bandwidth=0.05)
 
     # now do kernel phase
     pupil = './geometry/jwstmodel.pick'
@@ -250,7 +250,6 @@ def simple_demo():
 
     cen_file = './geometry/jwstcens.txt'
 
-    # pistons_430 = measure_nrm_pistons(maskdef, nrm_430,telD, debug=True)
     pupestim = create_pupilestim_array(cen_file, pistons_430, aberr.shape[0], telD)
 
     recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, mas2rad(65))
