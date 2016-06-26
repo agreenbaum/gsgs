@@ -41,7 +41,7 @@ def generate_aberration(nz, pv, npix=0,livepupilrad=None, debug=False, readin=Fa
     if readin is not False:
         pupmask = fits.getdata(readin)
         npix = pupmask.shape[0]
-        livepupilrad = max(np.array(pupmask.sum(axis=0), pupmask.sum(axis=1)])) / 2
+        livepupilrad = np.array([pupmask.sum(axis=0), pupmask.sum(axis=1)]).max() / 2
     else:
         pupmask = np.ones(rho.shape)
         pupmask[rho>1] = 0
@@ -60,7 +60,7 @@ def generate_aberration(nz, pv, npix=0,livepupilrad=None, debug=False, readin=Fa
         aberr[rho>1] = 0
         if debug:
             plt.imshow(aberr)
-             plt.show()
+            plt.show()
 
     aberr = aberr - np.mean(aberr[rho<=1])
     # force P2V
