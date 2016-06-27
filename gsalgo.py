@@ -32,7 +32,7 @@ from simtools import *
 from zerniketools import ZernikeFitter, HexikeFitter
 
 class NRM_GS:
-    def __init__(self, dpsf, pupsupport, pha_constraint, c_support, segmentwhich=None, god=None,
+    def __init__(self, dpsf, pupsupport, pha_constraint, c_support, nz = 15,segmentwhich=None, god=None,
                  watch=False):
         """
         requires both full pupil and nrm data and pupil supports for each
@@ -59,6 +59,7 @@ class NRM_GS:
         self.nitermax = 20
         self.zsmooth=True
         self.segmentwhich = segmentwhich
+	self.nz = nz
 
         # Do you want to see what the algorithm is doing each iteration? Set to True.
         self.watch=watch
@@ -202,7 +203,7 @@ class NRM_GS:
         if self.zsmooth==True:
             # smooth each iterations by fitting zernikes, gets rid of unphysical
             # high frequency artifacts
-            self.fit_zernikes()
+            self.fit_zernikes(nmodes=self.nz)
             #self.pupil_i = abs(self.pupil_i)*np.exp(1j*self.full_rec_wf)
             self.pupil_i = abs(self.pupsupport)*np.exp(1j*self.full_rec_wf)
 

@@ -222,7 +222,7 @@ def simple_demo():
     telD = 6.5
     lam1 = 4.3e-6
 
-    aberr, pupsupport = generate_aberration(npix=256, nz=5, pv=2.0)
+    aberr, pupsupport = generate_aberration(npix=256, nz=15, pv=2.5)
 
     psf_430 = make_PSF(pupsupport, aberr, 4.3e-6, 6.5, mas2rad(65), bandwidth=0.05)
 
@@ -268,7 +268,7 @@ def simple_demo():
     plt.colorbar()
     plt.subplot(235)
     plt.title("residual aberration")
-    plt.imshow(aberr - np.angle(recovered))
+    plt.imshow((aberr - np.angle(recovered))*pupsupport)
     plt.axis("off")
     plt.colorbar()
     plt.show()

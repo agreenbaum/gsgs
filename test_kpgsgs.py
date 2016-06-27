@@ -41,7 +41,7 @@ def generate_aberration(nz, pv, npix=0,livepupilrad=None, debug=False, readin=Fa
     if readin is not False:
         pupmask = fits.getdata(readin)
         npix = pupmask.shape[0]
-        livepupilrad = np.array([pupmask.sum(axis=0), pupmask.sum(axis=1)]).max() / 2
+        livepupilrad = npix/2
     else:
         pupmask = np.ones(rho.shape)
         pupmask[rho>1] = 0
@@ -197,7 +197,7 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
 
     nrm_support = pupconstraint.copy()
     nrm_support[abs(pupconstraint)>0] = 1
-    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, watch=False)
+    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, nz=45, watch=False)
     gs.nlamD = nlamD
     gs.damping = True
     gs.zsmooth=True
@@ -232,12 +232,18 @@ def simple_demo():
     telD = 6.5
     lam1 = 4.3e-6
 
-    aberr, pupsupport = generate_aberration(npix=256, nz=5, pv=2.0, readin="MASKCLEAR256.fits")
+    aberr, pupsupport = generate_aberration(npix=256, nz=36, pv=2.5, readin="MASKCLEAR256.fits")
+    plt.figure()
+    plt.subplot(121)
+    plt.imshow(aberr*pupsupport)
+    plt.subplot(122)
+    plt.imshow(aberr)
+    plt.show()
 
     psf_430 = make_PSF(pupsupport, aberr, lam1, telD, mas2rad(65), bandwidth=0.05)
 
     # now do kernel phase
-    pupil = './geometry/jwstmodel.pick'
+    pupil = './geometry/jwst.pick'
     a = pysco.rpo(pupil)
 
     a.extract_rpd(psf_430, plotim=False, wrad=200,weight=False,
@@ -260,7 +266,7 @@ def simple_demo():
     vmin = aberr.min()
     plt.subplot(231)
     plt.title("Starting aberration")
-    plt.imshow(aberr, vmax=vmax, vmin=vmin)
+    plt.imshow(aberr*pupsupport, vmax=vmax, vmin=vmin)
     plt.axis("off")
     plt.colorbar()
     plt.subplot(234)
@@ -273,21 +279,19 @@ def simple_demo():
     plt.imshow(pupestim, vmin=vmin, vmax=vmax)
     plt.axis("off")
     plt.colorbar()
-    # plt.subplot(232)
-    # plt.title("NRM")
-    # plt.imshow(nrmask)
-    # plt.axis("off")
-    # plt.colorbar()
     plt.subplot(236)
     plt.title("mask * aberration")
-    plt.imshow(nrmask*aberr, vmax=vmax, vmin=vmin)
+    estimmask = np.zeros(pupestim.shape)
+    estimmask[abs(pupestim)>0] =1
+    plt.imshow(estimmask*aberr, vmax=vmax, vmin=vmin)
     plt.axis("off")
     plt.colorbar()
     plt.subplot(235)
     plt.title("residual aberration")
-    plt.imshow(aberr - np.angle(recovered))
+    plt.imshow((aberr*pupsupport) - np.angle(recovered))
     plt.axis("off")
     plt.colorbar()
+    plt.savefig("KP_jwst_demo.png")
     plt.show()
 
 if __name__ == "__main__":
