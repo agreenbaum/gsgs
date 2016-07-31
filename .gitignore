@@ -1,6 +1,0 @@
-# no compiled python files
-*.pyc
-.DS_Store
-.gitignore
-gpidemo/*
-
