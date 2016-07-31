@@ -30,12 +30,15 @@ import matplotlib.pyplot as plt
 import zernike_AG as zern
 from gsgs import gsalgo
 from poppy.matrixDFT import matrix_dft as mft
-from gsgs.NRM_mask_definitions import NRM_mask_definitions
 from simtools import makedisk, mas2rad, baselinify, makeA
 
 
 class maskobj:
     def __init__(self, ctrs=None, hdia=None):
+        """
+        If you don't have any NRM geometry handy, here are hole centers & size for
+        NIRISS-like mask
+        """
         if ctrs is None:
             """Default is NIRISS AMI hole centers rounded to nearest hundreth of m"""
             self.ctrs = np.array([[ 0.00,  -2.64],
@@ -267,30 +270,49 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
 
 def simple_demo():
 
-    # set up pupil/image params
+    # set up pupil/image params - matching NIRISS right here
     telD = 6.5
     lam1 = 4.3e-6
-    lam1 = 1.6e-6
-    telD = 7.771
+    telD = 6.5
     pscale = mas2rad(65)
-    pscale = mas2rad(14.1)
 
-    aberr, pupsupport = generate_aberration(npix=256, nz=10, pv=2.5, readin="geometry/GPI_LYOT_12_10.fits")
+    # Simulate an aberration and grab the pupil support array. 
+    # npix are number of pixels in the image, nz is number of zernike terms
+    # pv is the peak to valley amount of aberration (kept below phase wrapping here)
+    # Have an option to read in a different pupil array here if you have one handy
+    aberr, pupsupport = generate_aberration(npix=256, nz=10, pv=2.5)
 
+    # Make a PSF from our example pupil and aberration, given the params we set up above
+    # Optional "debug" keyword here to see that you made your pupil correctly
+    # Setting debug=True will pop up a figure with your pupil, aberration, and PSF
     psf_430 = make_PSF(pupsupport, aberr, lam1, telD, pscale, bandwidth=0.05)
 
-    #maskdef = NRM_mask_definitions(maskname="jwst_g7s6c")
-    maskdef = NRM_mask_definitions(maskname="gpi_g10s40")
+    # maskdef stores NRM geometry
+    maskdef = maskobj()
+    # Just in case. 
     maskdef.ctrs = np.array(maskdef.ctrs)
 
+    # Makes the mask array the same size as our fake pupil from the geometry in maskdef
+    # Turn on debug here to see the mask that is created
     nrmask = make_mask(maskdef, aberr.shape[0], telD)
+    # Creates the NRM image (optional debug again)
     nrm_430 = make_PSF(nrmask, aberr, lam1, telD, pscale, bandwidth=0.05)#, debug=True)
 
+    # Measure hole pistons from the NRM image. Turn on debug to see if it's working,
+    # some plots will pop up showing how phases were selected from the visibility array
     pistons_430 = measure_nrm_pistons(maskdef, nrm_430,telD, lam1, pscale)#, debug=True)
+    # If trueaberr is specified (i.e. if you are doing a simulation and you know what
+    # aberration you put in) then debuf will show you the pupil estimate next to the 
+    # aberration. These should match if things are working properly. 
     pupestim = create_pupilestim_array(maskdef, pistons_430, aberr.shape[0], telD, trueaberr=aberr, debug=True)
 
+    # After all that setup now we can run gsgs!
+    # This will measure the "recovered" wavefront.
+    # Running this function will also pop up a plot showing the convergence
+    # The algorithm should converge smoothly if things are going well.
     recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, pscale)
 
+    # Some plots to see how we did. 
     print "************ TEST # 1: Does it work at all? *************"
     print "How did we do?", "rms error:", np.std(aberr - np.angle(recovered))
     vmax = aberr.max()
