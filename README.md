@@ -1,6 +1,6 @@
 # gsgs - A Greenbaum-Sivaramakrishnan style Gerchberg-Saxton
 GSGS depends on some functions and utilities in the poppy package:
-Matrix_dft, zernike available at [https://github.com/mperrin/poppy](https://github.com/mperrin/poppy)
+Matrix_dft, zernike available at [https://github.com/mperrin/poppy](https://github.com/mperrin/poppy. 
 It's also a good idea to have astropy, but here I only use it for fits files.
 
 The core program here is gsalgo.py
