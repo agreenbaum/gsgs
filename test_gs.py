@@ -34,10 +34,32 @@ from gsgs.NRM_mask_definitions import NRM_mask_definitions
 from simtools import makedisk, mas2rad, baselinify, makeA
 
 
-def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False):
+class maskobj:
+    def __init__(self, ctrs=None, hdia=None):
+        if ctrs is None:
+            """Default is NIRISS AMI hole centers rounded to nearest hundreth of m"""
+            self.ctrs = np.array([[ 0.00,  -2.64],
+            	                  [-2.29 ,  0.00],
+	                              [ 2.29 , -1.32],
+            	                  [-2.29 ,  1.32],
+	                              [-1.14 ,  1.98],
+             	                  [ 2.29 ,  1.32],
+	                              [ 1.14 ,  1.98]] )
+        else:
+            self.ctrs = ctrs
+        if hdia is None:
+            """Default is NIRISS AMI hole diameter"""
+            self.hdia = 0.80
+
+def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False, readin=False):
     """
     Generate a zero mean aberration (w/o piston) in radians
     """
+    if readin is not False:
+        pupmask = fits.getdata(readin)
+        npix = pupmask.shape[0]
+        livepupilrad = npix/2
+
     y,x = np.indices((npix,npix)) - npix/2.0
     if livepupilrad is not None:
         rho = np.sqrt( (x*x) + (y*y) ) / livepupilrad
@@ -49,6 +71,7 @@ def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False):
     for z in range(nz):
         aberr += np.random.rand()*zern.zernikel(z+1,rho,theta)
         aberr[rho>1] = 0
+        aberr[rho<0.2] = 0
         if debug:
             plt.imshow(aberr)
             plt.show()
@@ -57,8 +80,10 @@ def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False):
     # force P2V
     aberr = pv * aberr/(aberr.max() - aberr.min())
     print "rms pupil aberr:", np.sqrt(np.var(aberr[rho<1]))
-    pupmask = np.ones(rho.shape)
-    pupmask[rho>1] = 0
+    if readin is False:
+        pupmask = np.ones(rho.shape)
+        pupmask[rho>1] = 0
+        pupmask[rho<0.2] = 0
     return aberr, pupmask
 
 def make_PSF(pupmask, aberr, lam_c, telD, pixscale, bandwidth=0, debug=False):
@@ -115,24 +140,33 @@ def make_mask(maskobj, npix, OD, debug=False):
 
     return pupil
 
-def measure_nrm_pistons(maskobj, nrmpsf, telD, debug=False):
+def measure_nrm_pistons(maskobj, nrmpsf, telD, lam, pscale, debug=False):
 
     baselines, lengths, labels = baselinify(maskobj.ctrs)
-    scalefac = 0.48*nrmpsf.shape[0]/telD
+    #scalefac = 0.48*nrmpsf.shape[0]/telD
+    # test tolerance:
+    lamD_pix = (lam/telD)/pscale
+    scalefac = 0.4*nrmpsf.shape[0]/telD
+    scalefac = (nrmpsf.shape[0]/telD) / lamD_pix
 
     # calculate complex visibilities
     cvarray = mft(nrmpsf, nrmpsf.shape[0], nrmpsf.shape[0])
+    #cvarray = mft(nrmpsf, 0.2*nrmpsf.shape[0], nrmpsf.shape[0])
     cvpha = np.angle(cvarray)
 
     fringephases = np.zeros(len(lengths))
     phaseloc = np.zeros((cvpha.shape[0], cvpha.shape[1]))
+    regionmask = phaseloc.copy()
     for bl in range(len(lengths)):
         ctr = baselines[bl, 0]*scalefac, baselines[bl, 1]*scalefac
         # mask a small region
         region = makedisk(cvpha.shape[0], R=5, ctr=ctr)
+        regionasymm = makedisk(cvpha.shape[0], R=5, ctr=(-ctr[0], -ctr[1]))
+        regionmask += region-regionasymm
 
         fringephases[bl] = np.mean(cvpha[region==1])
         phaseloc[region==1] = fringephases[bl]
+        phaseloc[regionasymm==1] = -fringephases[bl]
 
     bl_mat = makeA(len(maskobj.ctrs))
     hole_phases = np.dot(np.linalg.pinv(bl_mat), fringephases)
@@ -158,21 +192,36 @@ def measure_nrm_pistons(maskobj, nrmpsf, telD, debug=False):
     print "Hole phases measured:", hole_phases
     return hole_phases
 
-def create_pupilestim_array(maskobj, pistons, npix, OD, debug=False):
+def create_pupilestim_array(maskobj, pistons, npix, OD, trueaberr = np.zeros((10,10)),debug=False):
 
     m2pix = 0.95*(npix)/OD
     pupilest = np.zeros((npix, npix))
+    fullmask=pupilest.copy()
     for q, ctrloc in enumerate(maskobj.ctrs):
         #ctrs = cvpha.shape[0]/2. - ctrloc[0], cvpha.shape[0]/2. - ctrloc[1]
         ctrs = ctrloc[0]*m2pix, ctrloc[1]*m2pix
         mask = makedisk(npix, 8, ctr=ctrs)
+        fullmask += mask
         #print q
         #print pistons
         pupilest[mask==1] = pistons[q]
 
     if debug:
         plt.title("pupil estimate")
+        plt.subplot(131)
         plt.imshow(pupilest)
+        plt.axis("off")
+        plt.colorbar()
+        plt.subplot(132)
+        plt.title("What the mask sees")
+        plt.imshow(trueaberr*fullmask)
+        plt.axis("off")
+        plt.colorbar()
+        plt.subplot(133)
+        plt.title("True aberration")
+        plt.imshow(trueaberr)
+        plt.axis("off")
+        plt.colorbar()
         plt.show()
 
     return pupilest
@@ -187,7 +236,7 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
 
     nrm_support = pupconstraint.copy()
     nrm_support[abs(pupconstraint)>0] = 1
-    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, watch=False)
+    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, nz=15, watch=False)
     gs.nlamD = nlamD
     gs.damping = True
     gs.zsmooth=True
@@ -221,21 +270,26 @@ def simple_demo():
     # set up pupil/image params
     telD = 6.5
     lam1 = 4.3e-6
+    lam1 = 1.6e-6
+    telD = 7.771
+    pscale = mas2rad(65)
+    pscale = mas2rad(14.1)
 
-    aberr, pupsupport = generate_aberration(npix=256, nz=15, pv=2.5)
+    aberr, pupsupport = generate_aberration(npix=256, nz=10, pv=2.5, readin="geometry/GPI_LYOT_12_10.fits")
 
-    psf_430 = make_PSF(pupsupport, aberr, 4.3e-6, 6.5, mas2rad(65), bandwidth=0.05)
+    psf_430 = make_PSF(pupsupport, aberr, lam1, telD, pscale, bandwidth=0.05)
 
-    maskdef = NRM_mask_definitions(maskname="jwst_g7s6c")
+    #maskdef = NRM_mask_definitions(maskname="jwst_g7s6c")
+    maskdef = NRM_mask_definitions(maskname="gpi_g10s40")
     maskdef.ctrs = np.array(maskdef.ctrs)
 
     nrmask = make_mask(maskdef, aberr.shape[0], telD)
-    nrm_430 = make_PSF(nrmask, aberr, 4.3e-6, 6.5, mas2rad(65), bandwidth=0.05)
+    nrm_430 = make_PSF(nrmask, aberr, lam1, telD, pscale, bandwidth=0.05)#, debug=True)
 
-    pistons_430 = measure_nrm_pistons(maskdef, nrm_430,telD, debug=True)
-    pupestim = create_pupilestim_array(maskdef, pistons_430, aberr.shape[0], telD)
+    pistons_430 = measure_nrm_pistons(maskdef, nrm_430,telD, lam1, pscale)#, debug=True)
+    pupestim = create_pupilestim_array(maskdef, pistons_430, aberr.shape[0], telD, trueaberr=aberr, debug=True)
 
-    recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, mas2rad(65))
+    recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, pscale)
 
     print "************ TEST # 1: Does it work at all? *************"
     print "How did we do?", "rms error:", np.std(aberr - np.angle(recovered))

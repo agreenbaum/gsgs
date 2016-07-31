@@ -70,11 +70,16 @@ class NRM_GS:
         self.damping=False
 
         if segmentwhich is None:
-            side = self.pupsupport.shape[0]
-            radsupport = self.pupsupport[:,side/2].sum() // 2
-            self.residmask = makedisk(side, radsupport-2)#,array="EVEN")
+            #side = self.pupsupport.shape[0]
+            #radsupport = self.pupsupport[:,side/2].sum() // 2
+            #self.residmask = makedisk(side, radsupport-2)#,array="EVEN")
+            self.residmask = self.pupsupport
+            print "residual mask slightly undersized"
+            #plt.imshow(self.residmask)
+            #plt.show()
         else:
             self.residmask = self.pupsupport
+            print "residual mask set to pupil support"
 
     def find_wavefront(self):
         self.i = 0
@@ -114,6 +119,7 @@ class NRM_GS:
             if self.i > self.nitermax:
                 print "Reached 500 iterations, stopping..."
                 break
+        print "Final difference metric", self.metric
 
         return self.pupil_i
 
@@ -164,17 +170,18 @@ class NRM_GS:
             plt.subplot(222)
             if self.i>1:
                 plt.title("current PSF, iteration {0}".format(self.i-1))
-                plt.imshow(abs(self.currentpsf)[100:-100, 100:-100], cmap="gray")
+                plt.imshow(abs(self.currentpsf)[10:-10, 10:-10], cmap="gray")
+                #plt.imshow(abs(mft(self.pupil_i, self.nlamD/4, self.npix_img)), cmap="gray")
             else:
                 plt.title("data PSF, iteration {0}".format(self.i-1))
-                plt.imshow(np.sqrt(self.dpsf)[100:-100, 100:-100], cmap="gray")
+                plt.imshow(np.sqrt(self.dpsf)[10:-10, 10:-10], cmap="gray")
             plt.subplot(223)
             plt.title("Pupil wavefront, iteration {0}".format(self.i-1))
             plt.imshow(np.angle(abs(self.pup_in)*self.pupsupport*np.exp(1j*self.puppha_i)))
             plt.colorbar()
             plt.subplot(224)
             plt.title("data PSF".format(self.i-1))
-            plt.imshow(np.sqrt(self.dpsf)[100:-100, 100:-100], cmap="gray")
+            plt.imshow(np.sqrt(self.dpsf)[10:-10, 10:-10], cmap="gray")
             plt.show()
 
         if hasattr(self, "fitscubename"):
@@ -226,15 +233,29 @@ class NRM_GS:
         plt.figure()
         print "DEBUG:",self.pup_i
         #plt.imshow(self.puppha_i)
-        plt.subplot(131)
+        plt.subplot(231)
         plt.title("Image amplitude, iteration {0}".format(self.i-1))
         plt.imshow(abs(self.amp))
-        plt.subplot(132)
+        plt.subplot(232)
         plt.title("Pupil support, iteration {0}".format(self.i-1))
         plt.imshow(self.pupsupport)
-        plt.subplot(133)
+        plt.subplot(233)
         plt.title("Pupil wavefront, iteration {0}".format(self.i-1))
         plt.imshow(np.angle(self.pupil_i))
+        plt.colorbar()
+        print "max wafront value:", np.angle(self.pupil_i).max()
+        print "current difference metric:", self.metriclist[-1]
+        plt.subplot(234)
+        plt.title("resid mask")
+        plt.imshow(np.angle(self.residmask))
+        plt.colorbar()
+        plt.subplot(235)
+        plt.title("initial phase")
+        plt.imshow(self.puppha_i)
+        plt.colorbar()
+        plt.subplot(236)
+        plt.title("residual")
+        plt.imshow(self.residual)
         plt.colorbar()
         plt.show()
         """
