@@ -10,7 +10,7 @@ The core program here is gsalgo.py - this computes all the Fourier transforms, e
 
 Provided are also:
 
-* zerniketools.py - for zernike smoothing an simulating aberrations. Mostly using programs from Tim van Werkhoven's [python](http://python101.vanwerkhoven.org)
+* zerniketools.py - for zernike smoothing an simulating aberrations. Put together mostly using a few programs from Tim van Werkhoven's [python](https://github.com/tvwerkhoven)
 * simtools.py - some stuff for generating fake data, pupils, etc.
 
 ###GSGS Demo###
