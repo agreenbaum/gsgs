@@ -20,10 +20,10 @@ Procedure
 P,phi_0 ---FT---> a,psi replace a with sqrt(dpsf), sqrt(dpsf),psi ---iFT---> P', phi' replace P' with P
 phi' with NRM phases only in nrm support --- repeat
 """
-HOME = "/Users/agreenba/"
-GS = HOME+"Dropbox/AlexNRM/makidonlab/GSreduction/"
 
 import sys,os
+HOME = os.path("~")
+GS = HOME+"Dropbox/AlexNRM/makidonlab/GSreduction/"
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
@@ -82,7 +82,7 @@ def generate_aberration(npix, nz, pv, livepupilrad=None, debug=False, readin=Fal
     aberr = aberr - np.mean(aberr[rho<=1])
     # force P2V
     aberr = pv * aberr/(aberr.max() - aberr.min())
-    print "rms pupil aberr:", np.sqrt(np.var(aberr[rho<1]))
+    print( "rms pupil aberr:", np.sqrt(np.var(aberr[rho<1])))
     if readin is False:
         pupmask = np.ones(rho.shape)
         pupmask[rho>1] = 0
@@ -108,9 +108,9 @@ def make_PSF(pupmask, aberr, lam_c, telD, pixscale, bandwidth=0, debug=False):
             psf += abs(efield)**2
 
     if debug:
-        print "Number of pixels in image:", npix
-        print "Number of lam/D in image:", nlamD
-        print "Number of lam/D per pixel:", nlamD/npix
+        print( "Number of pixels in image:", npix)
+        print( "Number of lam/D in image:", nlamD)
+        print( "Number of lam/D per pixel:", nlamD/npix)
         plt.set_cmap("gray")
         plt.subplot(131)
         plt.title("pupil mask")
@@ -192,7 +192,7 @@ def measure_nrm_pistons(maskobj, nrmpsf, telD, lam, pscale, debug=False):
         plt.imshow(nrmpsf[100:-100, 100:-100])
         plt.show()
 
-    print "Hole phases measured:", hole_phases
+    print( "Hole phases measured:", hole_phases)
     return hole_phases
 
 def create_pupilestim_array(maskobj, pistons, npix, OD, trueaberr = np.zeros((10,10)),debug=False):
@@ -205,8 +205,8 @@ def create_pupilestim_array(maskobj, pistons, npix, OD, trueaberr = np.zeros((10
         ctrs = ctrloc[0]*m2pix, ctrloc[1]*m2pix
         mask = makedisk(npix, 8, ctr=ctrs)
         fullmask += mask
-        #print q
-        #print pistons
+        #print( q)
+        #print( pistons)
         pupilest[mask==1] = pistons[q]
 
     if debug:
@@ -235,7 +235,7 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
     lamD_pix = pscale / (lam/D) # lam/D per pix
     nlamD = lamD_pix*npix
     
-    print "npix:", npix, "gives", nlamD, "lam/D across the image"
+    print( "npix:", npix, "gives", nlamD, "lam/D across the image")
 
     nrm_support = pupconstraint.copy()
     nrm_support[abs(pupconstraint)>0] = 1
@@ -248,12 +248,12 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
     gs.nitermax_c = 25
     wavefront = gs.find_wavefront()
 
-    print "==========================="
-    print wavefront
-    print np.nanmax(wavefront)
-    print wavefront.imag
-    print wavefront.real
-    print "==========================="
+    print( "===========================")
+    print( wavefront)
+    print( np.nanmax(wavefront))
+    print( wavefront.imag)
+    print( wavefront.real)
+    print( "===========================")
 
     #np.savetxt(save.replace(".fits", "_convlist.txt"), gs.metriclist)
     #fits.PrimaryHDU(data=np.angle(wavefront), header=psfhdr).writeto(save, clobber=True)
@@ -313,8 +313,8 @@ def simple_demo():
     recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, pscale)
 
     # Some plots to see how we did. 
-    print "************ TEST # 1: Does it work at all? *************"
-    print "How did we do?", "rms error:", np.std(aberr - np.angle(recovered))
+    print( "************ TEST # 1: Does it work at all? *************")
+    print( "How did we do?", "rms error:", np.std(aberr - np.angle(recovered)))
     vmax = aberr.max()
     vmin = aberr.min()
     plt.subplot(231)

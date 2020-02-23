@@ -131,13 +131,13 @@ class ZernikeFitter:
 		# Given the inner product vector of the test wavefront with Zernike basis,
 		# calculate the Zernike polynomial coefficients
 		zcoeffs = N.dot(self.cov_mat_in, wf_zern_inprod)
-		print "First 10 recovered Zernike coeffts:", zcoeffs[:10]
+		print( "First 10 recovered Zernike coeffts:", zcoeffs[:10])
 	
 		# Reconstruct (e.g. wavefront) surface from Zernike components
 		rec_wf = sum(val * zernikel(i, self.grid_rho, self.grid_phi) for (i, val) in enumerate(zcoeffs))
 		rec_wf = rec_wf*self.grid_mask
 
-		print "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std()
+		print( "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std())
 		return zcoeffs, rec_wf, (surface - rec_wf)*self.grid_mask
 
 
@@ -228,8 +228,8 @@ class HexikeFitter:
 		rec_wf = sum(val * hexikes[i] for (i, val) in enumerate(hcoeffs))
 
 		if 0:
-			print "First 10 recovered Hernike coeffts:", hcoeffs[:10]
-			print "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std()
+			print( "First 10 recovered Hernike coeffts:", hcoeffs[:10])
+			print( "Standard deviation of fit is %.3e" % (surface*self.grid_mask - rec_wf)[self.grid_mask].std())
 		return hcoeffs, rec_wf, (surface - rec_wf)*self.grid_mask
 
 

@@ -2,6 +2,7 @@
 
 """
 by A. Greenbaum agreenba@pha.jhu.edu 2015
+Updated Feb 2020 for python 3 compatibility alexandra.greenbaum@gmail.com
 
 Using the NRM phases to feed into a GS phase retrieval algorithm.
 
@@ -74,12 +75,12 @@ class NRM_GS:
             #radsupport = self.pupsupport[:,side/2].sum() // 2
             #self.residmask = makedisk(side, radsupport-2)#,array="EVEN")
             self.residmask = self.pupsupport
-            print "residual mask slightly undersized"
+            print( "residual mask slightly undersized")
             #plt.imshow(self.residmask)
             #plt.show()
         else:
             self.residmask = self.pupsupport
-            print "residual mask set to pupil support"
+            print( "residual mask set to pupil support")
 
     def find_wavefront(self):
         self.i = 0
@@ -92,13 +93,13 @@ class NRM_GS:
         # for testing purposes, set the number of iterations, check it every so often
         while abs(self.metric) > self.condition_c:
             self.make_iter_step(self.pupil_i)
-            print "Iteration no. ", self.i
-            print "Value of difference metric:", self.metric
+            print( "Iteration no. ", self.i)
+            print( "Value of difference metric:", self.metric)
             if (self.i==105 & hasattr(self, "fitscubename")):
                 fits.PrimaryHDU(data=self.fitscube).writeto(self.fitscubename,\
                         clobber=True)
             if self.i > self.nitermax_c:
-                print "Reached max constraint iterations"
+                print( "Reached max constraint iterations")
                 break
         # Force this to stop without relaxing constraint
         if self.i > self.nitermax:
@@ -108,18 +109,18 @@ class NRM_GS:
         self.c_support = np.zeros((self.c_support.shape))
         self.c_conv_i = self.i
         while abs(self.metric) > self.condition:
-            print "Iteration no. ", self.i
+            print( "Iteration no. ", self.i)
             if (hasattr(self, "fitscubename") and self.i==105):
                 fits.PrimaryHDU(data=self.fitscube).writeto(self.fitscubename,\
                     clobber=True)
             self.make_iter_step(self.pupil_i)
-            print "Iteration max:", self.nitermax
-            print "Max reached?", self.nitermax - self.i, "iterations left"
-            print "Value of difference metric:", self.metric
+            print( "Iteration max:", self.nitermax)
+            print( "Max reached?", self.nitermax - self.i, "iterations left")
+            print( "Value of difference metric:", self.metric)
             if self.i > self.nitermax:
-                print "Reached 500 iterations, stopping..."
+                print( "Reached 500 iterations, stopping...")
                 break
-        print "Final difference metric", self.metric
+        print( "Final difference metric", self.metric)
 
         return self.pupil_i
 
@@ -134,14 +135,14 @@ class NRM_GS:
         #self.pup_i[abs(self.constraint)>0] = 0
         self.puppha_i = np.angle(self.pup_in)
         if self.c_support.sum()>0:
-            print "using phase constraint"
+            print( "using phase constraint")
             self.puppha_i[abs(self.c_support)>0] =0
             self.puppha_i = self.puppha_i + self.constraint
         else:
-            print "no phase constraint specified"
+            print( "no phase constraint specified")
         if (self.i>1 & self.damping==True):
             damp = 0.2
-            print "damping correction:", damp
+            print( "damping correction:", damp)
             # 0.1 damping correction
             phaseupdate = (1-damp)*(self.puppha_i) + (damp)*(np.angle(self.pupil_i))
             self.pup_i = abs(self.pup_in)*(np.exp(1j*phaseupdate)*self.pupsupport)
@@ -162,7 +163,7 @@ class NRM_GS:
         if self.watch:
             plt.figure()
             if self.i>1:
-                print "convergence:",self.metriclist[-1]
+                print( "convergence:",self.metriclist[-1])
             #plt.imshow(self.puppha_i)
             plt.subplot(221)
             plt.title("Pupil amplitude, iteration {0}".format(self.i-1))
@@ -231,7 +232,7 @@ class NRM_GS:
 
         """
         plt.figure()
-        print "DEBUG:",self.pup_i
+        print( "DEBUG:",self.pup_i)
         #plt.imshow(self.puppha_i)
         plt.subplot(231)
         plt.title("Image amplitude, iteration {0}".format(self.i-1))
@@ -243,8 +244,8 @@ class NRM_GS:
         plt.title("Pupil wavefront, iteration {0}".format(self.i-1))
         plt.imshow(np.angle(self.pupil_i))
         plt.colorbar()
-        print "max wafront value:", np.angle(self.pupil_i).max()
-        print "current difference metric:", self.metriclist[-1]
+        print( "max wafront value:", np.angle(self.pupil_i).max())
+        print( "current difference metric:", self.metriclist[-1])
         plt.subplot(234)
         plt.title("resid mask")
         plt.imshow(np.angle(self.residmask))
@@ -285,7 +286,7 @@ class NRM_GS:
 
             # overwrite the metric here.
             self.truerror = np.sqrt(np.var(self.truresid[self.residmask==1]))
-            #print self.truerror
+            #print( self.truerror)
 
         return self.metric
 
@@ -294,7 +295,7 @@ class NRM_GS:
         # default is 15
         hexsz = 116 # rough size of a hex segment in out JWST segment which array
         self.full_rec_wf = np.zeros(self.pupsupport.shape) # This will be the new pupil phase
-        print self.segmentwhich
+        print( self.segmentwhich)
         if self.segmentwhich is not None:
             # If working with a segmented mirror, need a fits file labeling each mirror segement
             for seg in range(int(self.segmentwhich.max())):
@@ -313,11 +314,11 @@ class NRM_GS:
                 pady = (hexsz-ysize)// 2
 
                 """
-                print lox, hix, loy, hiy
-                print "total padding:",zernboxsize - xsize, zernboxsize-ysize
-                print "hex sizes", xsize, ysize
-                print "padding", padx, pady
-                print lox-padx,lox+xsize+padx, loy-pady,loy+ysize+pady
+                print( lox, hix, loy, hiy)
+                print( "total padding:",zernboxsize - xsize, zernboxsize-ysize)
+                print( "hex sizes", xsize, ysize)
+                print( "padding", padx, pady)
+                print( lox-padx,lox+xsize+padx, loy-pady,loy+ysize+pady)
                 """
 
                 hexmask = segmask[lox-padx:lox+xsize+padx + (hexsz-xsize)%2,\
@@ -380,9 +381,9 @@ class NRM_GS:
             fits.PrimaryHDU(data=self.full_rec_wf).writeto("zf_full_rec_wf.fits", clobber=True)
             fits.PrimaryHDU(data=zf.grid_mask*\
                 np.ones(self.rec_wf.shape)).writeto("zf_gridmask.fits", clobber=True)
-            print "==========================="
-            print "recovered zernike coefficients"
-            print self.zcoeffs
+            print( "===========================")
+            print( "recovered zernike coefficients")
+            print( self.zcoeffs)
             sys.exit()
             """
             if sidesz > 0:

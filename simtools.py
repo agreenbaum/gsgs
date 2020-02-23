@@ -65,26 +65,26 @@ def makeA(nh, verbose=False):
 	anand@stsci.edu  29 Aug 2014
 		"""
 
-	print "\nmakeA(): "
+	print( "\nmakeA(): ")
 	#                   rows         cols
 	ncols = (nh*(nh-1))//2
 	nrows = nh
 	matrixA = np.zeros((ncols, nrows))
-	if verbose: print matrixA
+	if verbose: print( matrixA)
 	row = 0
 	for h2 in range(nh):
-		if verbose: print
+		if verbose: print()
 		for h1 in range(h2+1,nh):
 			if h1 >= nh:
 				break
 			else:
 				if verbose:
-					print "R%2d: "%row, 
-					print "%d-%d"%(h1,h2)
+					print( "R%2d: "%row)
+					print( "%d-%d"%(h1,h2))
 				matrixA[row,h2] = -1
 				matrixA[row,h1] = +1
 				row += 1
-	if verbose: print
+	if verbose: print()
 	return matrixA
 
 
@@ -132,7 +132,7 @@ def makeK(nh, verbose=False):
 	agreenba@pha.jhu.edu  22 Aug 2015
 		"""
 
-	print "\nmakeK(): "
+	print( "\nmakeK(): ")
 	nrow = comb(nh, 3)
 	ncol = nh*(nh-1)/2
 
@@ -157,7 +157,7 @@ def makeK(nh, verbose=False):
 				matrixK[row+kk, countk[ii+jj]+kk] = 1
 				matrixK[row+kk, counti[ii]+jj+kk+1] = -1
 			row=row+kk+1
-	if verbose: print
+	if verbose: print()
 
 	return matrixK
 
@@ -201,8 +201,8 @@ def baselinify(ctrs):
 #	else:
 #		mask = np.ones((fov,fov))
 #	mask_aberr = mask * aberr
-#	# print out rms of this aberration over circular pupil?  - AS
-#	print np.var(aberr[rho<1])
+#	# print( out rms of this aberration over circular pupil?  - AS)
+#	print( np.var(aberr[rho<1]))
 #	return mask_aberr, aberr
 #
 #def avg_piston(aberr, positions, mask, R = 20, point=False):
