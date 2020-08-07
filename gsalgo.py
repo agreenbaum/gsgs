@@ -60,7 +60,7 @@ class NRM_GS:
         self.nitermax = 20
         self.zsmooth=True
         self.segmentwhich = segmentwhich
-	self.nz = nz
+        self.nz = nz
 
         # Do you want to see what the algorithm is doing each iteration? Set to True.
         self.watch=watch
@@ -204,7 +204,7 @@ class NRM_GS:
         # subtract the mean from the undersized pupil
         zmeanphase = np.angle(self.pupil_i) - \
                 np.mean(np.angle(self.pupil_i)[self.pupsupport==1])
-        #		np.mean(np.angle(self.pupil_i)[self.residmask==1])
+        #       np.mean(np.angle(self.pupil_i)[self.residmask==1])
         #self.pupil_i = abs(self.pupil_i)*np.exp(1j*zmeanphase)
         self.pupil_i = abs(self.pupsupport)*np.exp(1j*zmeanphase)
 
@@ -350,11 +350,11 @@ class NRM_GS:
             # crop down to just the pupil
             # Edit June 2016: if sidesz is zero this breaks! Added in this if statement.
             if sidesz>0:
-                croppedpupphases = (self.pupsupport*np.angle(self.pupil_i))[sidesz:-sidesz, \
-                                            sidesz:-sidesz]
+                croppedpupphases = (self.pupsupport*np.angle(self.pupil_i))[int(sidesz):-int(sidesz), \
+                                            int(sidesz):-int(sidesz)]
                 # initialize Zernike fitter
                 zf = ZernikeFitter(nzern=nmodes, narr = croppedpupphases.shape[0],
-                        extrasupportindex=(self.pupsupport[sidesz:-sidesz,sidesz:-sidesz]==0))
+                        extrasupportindex=(self.pupsupport[int(sidesz):-int(sidesz),int(sidesz):-int(sidesz)]==0))
             else:
                 croppedpupphases = (self.pupsupport*np.angle(self.pupil_i))
                 # initialize Zernike fitter
@@ -387,7 +387,7 @@ class NRM_GS:
             sys.exit()
             """
             if sidesz > 0:
-                self.full_rec_wf[sidesz:-sidesz, sidesz:-sidesz] = zf.grid_mask*self.rec_wf
+                self.full_rec_wf[int(sidesz):-int(sidesz), int(sidesz):-int(sidesz)] = zf.grid_mask*self.rec_wf
             else:
                 self.full_rec_wf = zf.grid_mask*self.rec_wf
 

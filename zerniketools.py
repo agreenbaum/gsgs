@@ -3,7 +3,7 @@
 import sys
 import astropy.io.fits as pyfits
 import numpy as N
-from scipy.misc import factorial as fac
+from scipy.special import factorial as fac
 from poppy import zernike as z
 
 ### Init functions
@@ -28,7 +28,7 @@ def zernike_rad(m, n, rho):
 	
 	pre_fac = lambda k: (-1.0)**k * fac(n-k) / ( fac(k) * fac( (n+m)/2.0 - k ) * fac( (n-m)/2.0 - k ) )
 	
-	return sum(pre_fac(k) * rho**(n-2.0*k) for k in xrange((n-m)/2+1))
+	return sum(pre_fac(k) * rho**(n-2.0*k) for k in range(int((n-m)/2+1)))
 
 def zernike(m, n, rho, phi):
 	"""
@@ -108,7 +108,7 @@ class ZernikeFitter:
 		else:
 			pass
 		# Compute list of explicit Zernike polynomials and keep them around for fitting
-		self.zern_list = [zernikel(i, self.grid_rho, self.grid_phi)*self.grid_mask for i in xrange(self.nzern)]
+		self.zern_list = [zernikel(i, self.grid_rho, self.grid_phi)*self.grid_mask for i in range(self.nzern)]
 
 		# Calculate covariance between all Zernike polynomials
 		self.cov_mat = N.array([[N.sum(zerni * zernj) for zerni in self.zern_list] for zernj in self.zern_list])

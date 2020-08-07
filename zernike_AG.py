@@ -9,9 +9,10 @@ by Tim Werkhoven
 import numpy as np
 import pylab as pl
 import sys,os
-from scipy.misc import factorial as fac
+from scipy.special import factorial as fac
 import math
-from gsgs import simtools
+#from gsgs import simtools
+import simtools
 
 # Coordinate grid:
 N = 64
@@ -46,7 +47,7 @@ def zernike_rad(m,n,rho):
 	wf = np.zeros(rho.shape) # grid of radial coords
 	if (np.mod(n-m, 2) ==1):
 		return rho*0.0
-	for k in range((n-m)/2+1):
+	for k in range(int((n-m)/2+1)):
 		wf += rho**(n-(2.0*k)) * ((-1.0)**k) * fac(n-k) / \
 		( fac(k) * fac( (n+m)/2.0 - k ) * \
 		fac( (n-m)/2.0 - k ) )
