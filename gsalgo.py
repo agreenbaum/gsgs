@@ -122,7 +122,7 @@ class NRM_GS:
                 break
         print( "Final difference metric", self.metric)
 
-        return self.pupil_i
+        return self.pupil_i*self.pupsupport
 
     def make_iter_step(self, pupil):
         """
@@ -178,7 +178,7 @@ class NRM_GS:
                 plt.imshow(np.sqrt(self.dpsf)[10:-10, 10:-10], cmap="gray")
             plt.subplot(223)
             plt.title("Pupil wavefront, iteration {0}".format(self.i-1))
-            plt.imshow(np.angle(abs(self.pup_in)*self.pupsupport*np.exp(1j*self.puppha_i)))
+            plt.imshow(self.pupsupport*np.angle(abs(self.pup_in)*self.pupsupport*np.exp(1j*self.puppha_i)))
             plt.colorbar()
             plt.subplot(224)
             plt.title("data PSF".format(self.i-1))
@@ -214,6 +214,10 @@ class NRM_GS:
             self.fit_zernikes(nmodes=self.nz)
             #self.pupil_i = abs(self.pupil_i)*np.exp(1j*self.full_rec_wf)
             self.pupil_i = abs(self.pupsupport)*np.exp(1j*self.full_rec_wf)
+
+        # 08/07/2020 This should step should end by cleaning out of support noise. 
+        self.pupil_i = self.pupil_i*self.pupsupport
+        #########################################################################
 
         self.currentpsf = mft(self.pupil_i, self.nlamD, self.npix_img)
 

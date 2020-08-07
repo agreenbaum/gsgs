@@ -22,13 +22,14 @@ phi' with NRM phases only in nrm support --- repeat
 """
 
 import sys,os
-HOME = os.path("~")
-GS = HOME+"Dropbox/AlexNRM/makidonlab/GSreduction/"
+HOME = os.path.abspath("~")
+#GS = HOME+"Dropbox/AlexNRM/makidonlab/GSreduction/"
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import zernike_AG as zern
-from gsgs import gsalgo
+#from gsgs import gsalgo
+import gsalgo
 from poppy.matrixDFT import matrix_dft as mft
 from simtools import makedisk, mas2rad, baselinify, makeA
 
@@ -42,12 +43,12 @@ class maskobj:
         if ctrs is None:
             """Default is NIRISS AMI hole centers rounded to nearest hundreth of m"""
             self.ctrs = np.array([[ 0.00,  -2.64],
-            	                  [-2.29 ,  0.00],
-	                              [ 2.29 , -1.32],
-            	                  [-2.29 ,  1.32],
-	                              [-1.14 ,  1.98],
-             	                  [ 2.29 ,  1.32],
-	                              [ 1.14 ,  1.98]] )
+                                  [-2.29 ,  0.00],
+                                  [ 2.29 , -1.32],
+                                  [-2.29 ,  1.32],
+                                  [-1.14 ,  1.98],
+                                  [ 2.29 ,  1.32],
+                                  [ 1.14 ,  1.98]] )
         else:
             self.ctrs = ctrs
         if hdia is None:
@@ -229,7 +230,7 @@ def create_pupilestim_array(maskobj, pistons, npix, OD, trueaberr = np.zeros((10
 
     return pupilest
 
-def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
+def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale, debug=False):
 
     npix = pupsupport.shape[0]
     lamD_pix = pscale / (lam/D) # lam/D per pix
@@ -239,10 +240,13 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
 
     nrm_support = pupconstraint.copy()
     nrm_support[abs(pupconstraint)>0] = 1
-    gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, nz=15, watch=False)
+    if debug:
+        gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, nz=15, watch=True)
+    else:
+        gs = gsalgo.NRM_GS(psf, pupsupport, pupconstraint, nrm_support, nz=15, watch=False)
     gs.nlamD = nlamD
     gs.damping = True
-    gs.zsmooth=True
+    gs.zsmooth=False
     gs.condition_c = 1.0e-2
     gs.nitermax = 500
     gs.nitermax_c = 25
@@ -260,7 +264,7 @@ def run_gsgs(psf, pupsupport, pupconstraint, D, lam, pscale):
 
     plt.set_cmap("BrBG")
     plt.subplot(121)
-    plt.imshow(np.angle(wavefront))
+    plt.imshow(pupsupport*np.angle(wavefront))
     plt.axis("off")
     plt.colorbar()
     plt.subplot(122)
@@ -285,7 +289,8 @@ def simple_demo():
     # Make a PSF from our example pupil and aberration, given the params we set up above
     # Optional "debug" keyword here to see that you made your pupil correctly
     # Setting debug=True will pop up a figure with your pupil, aberration, and PSF
-    psf_430 = make_PSF(pupsupport, aberr, lam1, telD, pscale, bandwidth=0.05)
+    print("psf_430")
+    psf_430 = make_PSF(pupsupport, aberr, lam1, telD, pscale, bandwidth=0.05, debug=False)
 
     # maskdef stores NRM geometry
     maskdef = maskobj()
@@ -296,25 +301,28 @@ def simple_demo():
     # Turn on debug here to see the mask that is created
     nrmask = make_mask(maskdef, aberr.shape[0], telD)
     # Creates the NRM image (optional debug again)
-    nrm_430 = make_PSF(nrmask, aberr, lam1, telD, pscale, bandwidth=0.05)#, debug=True)
+    print("nrm_430")
+    nrm_430 = make_PSF(nrmask, aberr, lam1, telD, pscale, bandwidth=0.05, debug=False)
 
     # Measure hole pistons from the NRM image. Turn on debug to see if it's working,
     # some plots will pop up showing how phases were selected from the visibility array
-    pistons_430 = measure_nrm_pistons(maskdef, nrm_430,telD, lam1, pscale)#, debug=True)
+    print("pistons_430")
+    pistons_430 = measure_nrm_pistons(maskdef, nrm_430,telD, lam1, pscale, debug=False)
     # If trueaberr is specified (i.e. if you are doing a simulation and you know what
     # aberration you put in) then debuf will show you the pupil estimate next to the 
     # aberration. These should match if things are working properly. 
-    pupestim = create_pupilestim_array(maskdef, pistons_430, aberr.shape[0], telD, trueaberr=aberr, debug=True)
+    pupestim = create_pupilestim_array(maskdef, pistons_430, aberr.shape[0], telD, trueaberr=aberr, debug=False)
 
     # After all that setup now we can run gsgs!
     # This will measure the "recovered" wavefront.
     # Running this function will also pop up a plot showing the convergence
     # The algorithm should converge smoothly if things are going well.
-    recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, pscale)
+    recovered, pup_i = run_gsgs(psf_430, pupsupport, pupestim, telD, lam1, pscale, debug=False)
 
     # Some plots to see how we did. 
     print( "************ TEST # 1: Does it work at all? *************")
-    print( "How did we do?", "rms error:", np.std(aberr - np.angle(recovered)))
+    print( "How did we do?", "rms error:", np.std(aberr - pupsupport*np.angle(recovered)))
+    print( "True aberration rms error:", np.std(aberr))
     vmax = aberr.max()
     vmin = aberr.min()
     plt.subplot(231)
@@ -324,7 +332,7 @@ def simple_demo():
     plt.colorbar()
     plt.subplot(234)
     plt.title("Recovered aberration")
-    plt.imshow(np.angle(recovered), vmax=vmax, vmin=vmin)
+    plt.imshow(pupsupport*np.angle(recovered), vmax=vmax, vmin=vmin)
     plt.axis("off")
     plt.colorbar()
     plt.subplot(233)
